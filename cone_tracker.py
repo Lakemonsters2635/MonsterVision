@@ -82,9 +82,16 @@ while True:
                 pt1 = int(detection.x_min * img_w), int(detection.y_min * img_h)
                 pt2 = int(detection.x_max * img_w), int(detection.y_max * img_h)
 
+# Choose the color based on the label
+
+                if detection.label == 0:
+                    color = (0, 255, 255)
+                else :
+                    color = (20, 50, 239)
+
 # Draw the bounding box on the image.
 
-                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 1)
+                cv2.rectangle(frame, pt1, pt2, color, 1)
 
 # Ptx, pty and ptz are simply where we draw the x, y and z positions underneath the bounding box.
 
@@ -95,10 +102,10 @@ while True:
 
 # Scribble the results onto the image
 
-                cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
-                cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
-                cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
-                cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
+                cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
 
 # Display the Frame
 
