@@ -11,10 +11,10 @@ p = device.create_pipeline(config={
     "streams": ["metaout", "previewout"],
     "ai": {
 # The next five lines determine which model to use.
-        "blob_file": "/home/pi/MonsterVision/resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
-        "blob_file_config": "/home/pi/MonsterVision/resources/nn/cells-and-cones/cells-and-cones.json",
-        # "blob_file": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.blob.sh14cmx14NCE1",
-        # "blob_file_config": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.json",
+        "blob_file": "./resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
+        "blob_file_config": "./resources/nn/cells-and-cones/cells-and-cones.json",
+        # "blob_file": "./resources/nn/trafficcones/trafficcones.blob.sh14cmx14NCE1",
+        # "blob_file_config": "./resources/nn/trafficcones/trafficcones.json",
         'shaves' : 14,
         'cmx_slices' : 14,
         'NN_engines' : 1,
