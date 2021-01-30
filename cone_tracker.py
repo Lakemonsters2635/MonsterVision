@@ -1,6 +1,8 @@
 import cv2
 import depthai
 
+cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
+
 # Initialize the OAK Camera.  This is boilerplate.
 
 device = depthai.Device('', False)
@@ -9,8 +11,10 @@ p = device.create_pipeline(config={
     "streams": ["metaout", "previewout"],
     "ai": {
 # The next five lines determine which model to use.
-        "blob_file": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.blob.sh14cmx14NCE1",
-        "blob_file_config": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.json",
+        "blob_file": "/home/pi/MonsterVision/resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
+        "blob_file_config": "/home/pi/MonsterVision/resources/nn/cells-and-cones/cells-and-cones.json",
+        # "blob_file": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.blob.sh14cmx14NCE1",
+        # "blob_file_config": "/home/pi/MonsterVision/resources/nn/trafficcones/trafficcones.json",
         'shaves' : 14,
         'cmx_slices' : 14,
         'NN_engines' : 1,
@@ -80,19 +84,21 @@ while True:
 
 # Draw the bounding box on the image.
 
-                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 1)
 
 # Ptx, pty and ptz are simply where we draw the x, y and z positions underneath the bounding box.
 
                 ptx = int(detection.x_min * img_w), int(detection.y_max * img_h+10)
                 pty = int(detection.x_min * img_w), int(detection.y_max * img_h+20)
                 ptz = int(detection.x_min * img_w), int(detection.y_max * img_h+30)
+                ptc = int(detection.x_min * img_w), int(detection.y_max * img_h+40)
 
 # Scribble the results onto the image
 
                 cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
                 cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
                 cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
+                cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
 
 # Display the Frame
 
