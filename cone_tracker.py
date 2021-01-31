@@ -19,7 +19,7 @@ device = depthai.Device('', False)
 
 p = device.create_pipeline(config={
     "streams": ["metaout", "previewout"
-            # , "disparity_color"           ## Enable this to see false color depth map display
+            # , "disparity_color"                 ## Enable this to see false color depth map display
         ],
     "ai": {
 # The next five lines determine which model to use.
