@@ -1,6 +1,16 @@
 import cv2
 import depthai
 
+# def ptInRect(pt, rect) -> bool:
+#     return pt[0] >= rect[0] and pt[0] <= rect[2] and pt[1] >= rect[1] and pt[1] <= rect[3]
+
+# def rectInRect(rect1, rect2) -> bool:
+#     return  ptInRect((rect1[0], rect1[1]), rect2) and \
+#             ptInRect((rect1[0], rect1[3]), rect2) and \
+#             ptInRect((rect1[2], rect1[1]), rect2) and \
+#             ptInRect((rect1[2], rect1[3]), rect2)
+
+
 cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
 
 # Initialize the OAK Camera.  This is boilerplate.
@@ -8,7 +18,9 @@ cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
 device = depthai.Device('', False)
 
 p = device.create_pipeline(config={
-    "streams": ["metaout", "previewout"],
+    "streams": ["metaout", "previewout"
+            # , "disparity_color"           ## Enable this to see false color depth map display
+        ],
     "ai": {
 # The next five lines determine which model to use.
         "blob_file": "./resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
@@ -20,6 +32,9 @@ p = device.create_pipeline(config={
         'NN_engines' : 1,
 # This line is needed enable the depth feature
         'calc_dist_to_bb' : True,
+    },
+    "depth": {
+        'padding_factor': 0.3
     }
 })
 
@@ -51,12 +66,21 @@ while True:
 # Loop over the data packets.
     for packet in data_packets:
 
+        if packet.stream_name == "disparity_color":
+            data = packet.getData()
+            # data0 = data[0, :, :]
+            # data1 = data[1, :, :]
+            # data2 = data[2, :, :]
+            # frame = cv2.merge([data0, data1, data2])
+            cv2.imshow('Depth', data)
+           
+            
 # The previewout stream is our conventional video stream
 # NOTE: we can only get video data from the camera via the DepthAI API.  This means we cannot use any
 # # standard Linux camera s/w to view the OAK video.
 #         
         if packet.stream_name == 'previewout':
-
+    
 # The camera returns data in RGB format.  OpenCV use BGR.  These lines create an OpenCV-compatible
 # image.  Unless we want to preview the RGB stream, this step would not be needed on the robot.
 
@@ -72,7 +96,24 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-# Loop over all objects detected
+# # Loop over all objects detected, finding any nested ones
+
+#             unique_detections = []
+
+#             for detection in detections:
+#                 if not unique_detections:
+#                     unique_detections.append(detection)
+#                 else:
+#                     rect1 = (detection.x_min, detection.y_min, detection.x_max, detection.y_max)
+#                     for unique in unique_detections:
+#                         rect2 = (unique.x_min, unique.y_min, unique.x_max, unique.y_max)
+#                         if rectInRect(rect2, rect1):
+#                             unique_detections.remove(unique)
+#                             unique_detections.append(detection)
+#                             break
+#                         elif not rectInRect(rect1, rect2):
+#                             unique_detections.append(detection)
+#                             break
 
             for detection in detections:
 
@@ -95,16 +136,24 @@ while True:
 
 # Ptx, pty and ptz are simply where we draw the x, y and z positions underneath the bounding box.
 
-                ptx = int(detection.x_min * img_w), int(detection.y_max * img_h+10)
-                pty = int(detection.x_min * img_w), int(detection.y_max * img_h+20)
-                ptz = int(detection.x_min * img_w), int(detection.y_max * img_h+30)
-                ptc = int(detection.x_min * img_w), int(detection.y_max * img_h+40)
+# If labelling would be off the bottom of the image, move to above the bounding box
+
+                if (int(detection.y_max * img_h+50)) > img_h:
+                    ptx = int(detection.x_min * img_w), int(detection.y_min * img_h-50)
+                    pty = int(detection.x_min * img_w), int(detection.y_min * img_h-40)
+                    ptz = int(detection.x_min * img_w), int(detection.y_min * img_h-30)
+                    ptc = int(detection.x_min * img_w), int(detection.y_min * img_h-20)
+                else:
+                    ptx = int(detection.x_min * img_w), int(detection.y_max * img_h+10)
+                    pty = int(detection.x_min * img_w), int(detection.y_max * img_h+20)
+                    ptz = int(detection.x_min * img_w), int(detection.y_max * img_h+30)
+                    ptc = int(detection.x_min * img_w), int(detection.y_max * img_h+40)
 
 # Scribble the results onto the image
 
-                cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x*39.3071), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y*39.3071), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z*39.3071), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
 
 # Display the Frame
