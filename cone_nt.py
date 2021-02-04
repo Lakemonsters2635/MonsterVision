@@ -1,5 +1,18 @@
 import cv2
 import depthai
+import sys
+import time
+from networktables import NetworkTables
+
+# To see messages from networktables, you must setup logging
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+ip="192.168.1.53"
+NetworkTables.initialize(server=ip)
+
+sd = NetworkTables.getTable("SmartDashboard")
 
 cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
 cv2.resizeWindow('MonsterVision', (600, 600))
@@ -87,6 +100,8 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
+            sd.putNumber("MonsterVision/Numberofobjects",len(detections))
+            i = 0
             for detection in detections:
 
 # Pt2 and pt2 define the bounding box.  Create them from (x_min, x_min) and (x_max, y_max).  Note how
@@ -127,7 +142,12 @@ while True:
                 cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y*39.3071), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z*39.3071), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-
+                
+                sd.putNumber("MonsterVision/"+str(i)+"/Label",detection.label)
+                sd.putNumber("MonsterVision/"+str(i)+"/x",detection.depth_x)
+                sd.putNumber("MonsterVision/"+str(i)+"/y",detection.depth_y)
+                sd.putNumber("MonsterVision/"+str(i)+"/z",detection.depth_z)
+                i = i+1
 # Display the Frame
 
             cv2.imshow('MonsterVision', frame)

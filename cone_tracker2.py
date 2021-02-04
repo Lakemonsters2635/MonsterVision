@@ -1,16 +1,35 @@
 import cv2
 import depthai
 
+# Given an x/y coordinate in NN (which are always in the range of 0..1), return its
+# pixel coordinates in the depth (disparity) frame.  nn2depth is a cached copy of the
+# result of device.get_nn_to_depth_bbox_mapping
+
+def nn_to_depth_coord(x, y, nn2depth):
+    x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
+    y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
+    return x_depth, y_depth
+
+
+# Given an object's bounding box (pt1, pt2) and the padding_factor, return the bounding
+# box over which the NN has computed depth
+
+def average_depth_coord(pt1, pt2, padding_factor):
+    factor = 1 - padding_factor
+    x_shift = int((pt2[0] - pt1[0]) * factor / 2)
+    y_shift = int((pt2[1] - pt1[1]) * factor / 2)
+    avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
+    avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
+    return avg_pt1, avg_pt2
+
+
+    
 cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
 cv2.resizeWindow('MonsterVision', (600, 600))
 
-# Initialize the OAK Camera.  This is boilerplate.
-
-device = depthai.Device('', False)
-
-p = device.create_pipeline(config={
+config = {
     "streams": ["metaout", "previewout"
-            # , "disparity_color"                 ## Enable this to see false color depth map display
+            , # "disparity_color"                 ## Enable this to see false color depth map display
         ],
     "ai": {
 # The next five lines determine which model to use.
@@ -27,7 +46,13 @@ p = device.create_pipeline(config={
     "depth": {
         'padding_factor': 0.3
     }
-})
+}
+
+# Initialize the OAK Camera.  This is boilerplate.
+
+device = depthai.Device('', False)
+
+p = device.create_pipeline(config=config)
 
 if p is None:
     raise RuntimeError("Error initializing pipelne")
@@ -36,6 +61,19 @@ if p is None:
 # the first nnet packets to arrive.
 
 detections = []
+
+# Since the RGB camera has a 4K resolution and the neural networks accept only images with specific
+# resolution (like 300x300), the original image is cropped to meet the neural network requirements.
+# On the other side, the disparity frames returned by the neural network are in full resolution 
+# available on the mono cameras.
+#
+# nn2depth will contain:
+#   max_h       height of nn previewout frame
+#   max_w       width of nn previewout frame
+#   offset_x    X-offset of previewout frame within disparity frame
+#   offset_y    Y-offset of previewout frame within disparity frame
+
+nn2depth = device.get_nn_to_depth_bbox_mapping()
 
 while True:
 # The pipeline returns nnet packets and data packets.  Nnet packets contain the output(s) of the
@@ -63,6 +101,23 @@ while True:
             # data1 = data[1, :, :]
             # data2 = data[2, :, :]
             # frame = cv2.merge([data0, data1, data2])
+
+            for detection in detections:
+    
+# Pt2 and pt2 define the bounding box.  Create them from (x_min, x_min) and (x_max, y_max).  
+# The call to nn_to_depth_coord converts the coordinate system
+
+                pt1 = nn_to_depth_coord(detection.x_min, detection.y_min, nn2depth)
+                pt2 = nn_to_depth_coord(detection.x_max, detection.y_max, nn2depth)
+
+                cv2.rectangle(data, pt1, pt2, (255, 255, 255), 2)
+
+# Avg_pt1 and avg_pts are the corners of the bounding box that the NN used to calculate the
+# distance to the detected object.                
+
+                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2, config['depth']['padding_factor'])
+                cv2.rectangle(data, avg_pt1, avg_pt2, (255, 0, 0), 1)
+
             cv2.imshow('Depth', data)
            
             
@@ -106,6 +161,12 @@ while True:
 
                 cv2.rectangle(frame, pt1, pt2, color, 1)
 
+# Avg_pt1 and avg_pts are the corners of the bounding box that the NN used to calculate the
+# distance to the detected object.                
+
+                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2, config['depth']['padding_factor'])
+                cv2.rectangle(frame, avg_pt1, avg_pt2, (255, 0, 0), 1)
+
 # Ptx, pty and ptz are simply where we draw the x, y and z positions underneath the bounding box.
 
 # If labelling would be off the bottom of the image, move to above the bounding box
@@ -132,7 +193,7 @@ while True:
 
             cv2.imshow('MonsterVision', frame)
 
-# When user typwa 'q', we're all done!
+# When user types 'q', we're all done!
 
     if cv2.waitKey(1) == ord('q'):
         break
