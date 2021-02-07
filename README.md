@@ -1,7 +1,9 @@
 # MonsterVision
 
 ## IMPORTANT NOTE:
-VSCode supports Github, but the authentication on Raspberry Pi seems to be a little broken.  
+VSCode supports Github, but you may need to update your Raspberry Pi:
+
+  sudo apt-get install gnome-keyring
 
 ### To sign in:
 
