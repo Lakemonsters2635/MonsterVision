@@ -1,5 +1,24 @@
 import cv2
 import depthai
+import cv_videosource as cvv
+import sys
+import numpy as np
+import sys
+import time
+from networktables import NetworkTables
+
+# To see messages from networktables, you must setup logging
+import logging
+
+CAMERA_SERVER = False
+LIVE_VIDEO = False
+
+logging.basicConfig(level=logging.DEBUG)
+
+ip="192.168.1.53"
+NetworkTables.initialize(server=ip)
+
+sd = NetworkTables.getTable("SmartDashboard")
 
 # Given an x/y coordinate in NN (which are always in the range of 0..1), return its
 # pixel coordinates in the depth (disparity) frame.  nn2depth is a cached copy of the
@@ -23,9 +42,13 @@ def average_depth_coord(pt1, pt2, padding_factor):
     return avg_pt1, avg_pt2
 
 
-    
-cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('MonsterVision', (600, 600))
+if LIVE_VIDEO:    
+    cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('MonsterVision', (600, 600))
+
+if CAMERA_SERVER:
+    vidsrc = cvv.CVVideoSource(fps=5)#cam_size=(640, 480))#image="fish.jpg")
+    vidsrc.go()
 
 config = {
     "streams": ["metaout", "previewout"
@@ -74,6 +97,8 @@ detections = []
 #   offset_y    Y-offset of previewout frame within disparity frame
 
 nn2depth = device.get_nn_to_depth_bbox_mapping()
+
+frameNumber = 0
 
 while True:
 # The pipeline returns nnet packets and data packets.  Nnet packets contain the output(s) of the
@@ -142,6 +167,9 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
+            sd.putNumber("MonsterVision/Numberofobjects",len(detections))
+            i = 0
+
             for detection in detections:
 
 # Pt2 and pt2 define the bounding box.  Create them from (x_min, x_min) and (x_max, y_max).  Note how
@@ -189,16 +217,36 @@ while True:
                 cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z*39.3071), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
 
+                sd.putNumber("MonsterVision/"+str(i)+"/Label",detection.label)
+                sd.putNumber("MonsterVision/"+str(i)+"/x",detection.depth_x)
+                sd.putNumber("MonsterVision/"+str(i)+"/y",detection.depth_y)
+                sd.putNumber("MonsterVision/"+str(i)+"/z",detection.depth_z)
+                i = i+1
+
 # Display the Frame
 
-            cv2.imshow('MonsterVision', frame)
+            cv2.putText(frame, str(frameNumber), (int(img_w/2), int(img_h/2)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            frameNumber += 1
+
+            if CAMERA_SERVER:
+# I have NO idea why it is necessary to roll the frame to make it look right in the camera stream...
+                vidsrc.new_frame(frame)
+                # vidsrc.new_frame(np.roll(frame, (-255, 32), axis=(1, 0)))
+
+            if LIVE_VIDEO:
+                cv2.imshow('MonsterVision', frame)
 
 # When user types 'q', we're all done!
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+    if LIVE_VIDEO:
+        if cv2.waitKey(1) == ord('q'):
+            break
 
 # All done.  Clean up after yourself, like your mama taught you.
 
+if CAMERA_SERVER:
+    vidsrc.stop()
+    del vidsrc
 del p
 del device
+sys.exit()
