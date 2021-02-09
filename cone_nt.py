@@ -7,12 +7,19 @@ from cscore import CameraServer
 import json
 import socket
 
-configFile = "/boot/frc.json"
-
-
+# Constants
+CONFIG_FILE = "/boot/frc.json"
+CAMERA_FPS = 30
+DESIRED_FPS = 5
+PREVIEW_WIDTH = 200
+PREVIEW_HEIGHT = 200
+KEEP_ASPECT_RATIO = True
+STREAMS=["metaout", "previewout"
+            # , "disparity_color"                 ## Enable this to see false color depth map display
+        ]
+        
 # To see messages from networktables, you must setup logging
 import logging
-
 logging.basicConfig(level=logging.DEBUG)
 
 team = None
@@ -23,7 +30,7 @@ def getMyIP():
 
 def parseError(str):
     """Report parse error."""
-    print("config error in '" + configFile + "': " + str, file=sys.stderr)
+    print("config error in '" + CONFIG_FILE + "': " + str, file=sys.stderr)
 
 
 def readConfig():
@@ -31,10 +38,10 @@ def readConfig():
     global server
 
     try:
-        with open(configFile, "rt", encoding="utf-8") as f:
+        with open(CONFIG_FILE, "rt", encoding="utf-8") as f:
             j = json.load(f)
     except OSError as err:
-        print("could not open '{}': {}".format(configFile, err), file=sys.stderr)
+        print("could not open '{}': {}".format(CONFIG_FILE, err), file=sys.stderr)
         return False
         
     # top level must be an object
@@ -65,33 +72,28 @@ if not readConfig():
     sys.exit(1)
 
 if server:
-    NT_SERVER_ADDRESS = getMyIP()
+    nt_server_address = getMyIP()
 else:
-    NT_SERVER_ADDRESS = "10." + str(int(team/100)) + "." + str(int(team%100)) + ".2"
+    nt_server_address = "10." + str(int(team/100)) + "." + str(int(team%100)) + ".2"
 
-ip=NT_SERVER_ADDRESS
+ip=nt_server_address
 NetworkTables.initialize(server=ip)
 
-sd = NetworkTables.getTable("SmartDashboard")
+sd = NetworkTables.getTable("MonsterVision")
 
 # cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
 # cv2.resizeWindow('MonsterVision', (600, 600))
 
 # Initialize the OAK Camera.  This is boilerplate.
-cameraFPS = 30
-desiredFPS = 5
-width = 200
-height = 200
+
 cs = CameraServer.getInstance()
 cs.enableLogging()
-output = cs.putVideo("MonsterVision", width, height)
+output = cs.putVideo("MonsterVision", PREVIEW_WIDTH, PREVIEW_HEIGHT)
 
 device = depthai.Device('', False)
 
 p = device.create_pipeline(config={
-    "streams": ["metaout", "previewout"
-            # , "disparity_color"                 ## Enable this to see false color depth map display
-        ],
+    "streams": STREAMS,
     "ai": {
 # The next five lines determine which model to use.
         "blob_file": "./resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
@@ -103,6 +105,8 @@ p = device.create_pipeline(config={
         'NN_engines' : 1,
 # This line is needed enable the depth feature
         'calc_dist_to_bb' : True,
+# False: use full RGB FOV, not keeping aspect ratio
+        'keep_aspect_ratio' : KEEP_ASPECT_RATIO,
     },
     "depth": {
         'padding_factor': 0.3
@@ -161,13 +165,13 @@ while True:
             data2 = data[2, :, :]
             frame = cv2.merge([data0, data1, data2])
 
-# Get the height and width of the video frame.  We need this because the bounding box is returned as
+# Get the PREVIEW_HEIGHT and PREVIEW_WIDTH of the video frame.  We need this because the bounding box is returned as
 # a fraction of the overall image size.  So we use these value to convert to pixels.
 
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-            sd.putNumber("MonsterVision/Numberofobjects",len(detections))
+            sd.putNumber("Numberofobjects",len(detections))
 
             i = 0
             for detection in sorted(detections, key=lambda det: det.label*100 + det.depth_z):
@@ -213,17 +217,17 @@ while True:
                 cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z*39.3071), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 
-                sd.putNumber("MonsterVision/"+str(i)+"/Label",detection.label)
-                sd.putNumber("MonsterVision/"+str(i)+"/x",detection.depth_x)
-                sd.putNumber("MonsterVision/"+str(i)+"/y",detection.depth_y)
-                sd.putNumber("MonsterVision/"+str(i)+"/z",detection.depth_z)
+                sd.putNumber(str(i)+"/Label",detection.label)
+                sd.putNumber(str(i)+"/x",detection.depth_x)
+                sd.putNumber(str(i)+"/y",detection.depth_y)
+                sd.putNumber(str(i)+"/z",detection.depth_z)
                 i = i+1
 
 
 # Display the Frame
 
             # cv2.imshow('MonsterVision', frame)
-            if frame_counter % (cameraFPS/desiredFPS) == 0:
+            if frame_counter % (CAMERA_FPS/DESIRED_FPS) == 0:
                 output.putFrame(frame)
             frame_counter += 1
 
