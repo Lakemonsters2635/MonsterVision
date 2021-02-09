@@ -1,6 +1,6 @@
 import cv2
 import depthai
-import cv_videosource as cvv
+#import cv_videosource as cvv
 import sys
 import numpy as np
 import sys
@@ -11,14 +11,14 @@ from networktables import NetworkTables
 import logging
 
 CAMERA_SERVER = False
-LIVE_VIDEO = False
+LIVE_VIDEO = True
 
 logging.basicConfig(level=logging.DEBUG)
 
 ip="192.168.1.53"
 NetworkTables.initialize(server=ip)
 
-sd = NetworkTables.getTable("SmartDashboard")
+sd = NetworkTables.getTable("MonsterVision")
 
 # Given an x/y coordinate in NN (which are always in the range of 0..1), return its
 # pixel coordinates in the depth (disparity) frame.  nn2depth is a cached copy of the
@@ -52,7 +52,7 @@ if CAMERA_SERVER:
 
 config = {
     "streams": ["metaout", "previewout"
-            , # "disparity_color"                 ## Enable this to see false color depth map display
+            , "disparity_color"                 ## Enable this to see false color depth map display
         ],
     "ai": {
 # The next five lines determine which model to use.
@@ -65,6 +65,8 @@ config = {
         'NN_engines' : 1,
 # This line is needed enable the depth feature
         'calc_dist_to_bb' : True,
+# Enable the following to use full RGB FOV, not keeping aspect ratio
+        # 'keep_aspect_ratio' : False,
     },
     "depth": {
         'padding_factor': 0.3
@@ -126,6 +128,8 @@ while True:
             # data1 = data[1, :, :]
             # data2 = data[2, :, :]
             # frame = cv2.merge([data0, data1, data2])
+            dsp_h = data.shape[0]
+            dsp_w = data.shape[1]
 
             for detection in detections:
     
