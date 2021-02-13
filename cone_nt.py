@@ -7,6 +7,15 @@ from cscore import CameraServer
 import json
 import socket
 
+import numpy
+import math
+
+CAMERA_TILT = -10 * math.pi / 180
+CAMERA_OFFSET = [0, .30, .10]
+sinTheta = math.sin(CAMERA_TILT)
+cosTheta = math.cos(CAMERA_TILT)
+rotationMatrix = [[1, 0, 0], [0, cosTheta, sinTheta], [0, -sinTheta, cosTheta]]
+
 # Constants
 CONFIG_FILE = "/boot/frc.json"
 CAMERA_FPS = 30
@@ -17,6 +26,7 @@ KEEP_ASPECT_RATIO = True
 STREAMS=["metaout", "previewout"
             # , "disparity_color"                 ## Enable this to see false color depth map display
         ]
+LABELS = ["powerCell", "trafficCone"]
         
 # To see messages from networktables, you must setup logging
 import logging
@@ -171,9 +181,8 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-            sd.putNumber("Numberofobjects",len(detections))
-
             i = 0
+            objects = []
             for detection in sorted(detections, key=lambda det: det.label*100 + det.depth_z):
 
 # Pt2 and pt2 define the bounding box.  Create them from (x_min, x_min) and (x_max, y_max).  Note how
@@ -211,18 +220,20 @@ while True:
 # Scribble the results onto the image
 
                 cv2.putText(frame, str(i), pt1, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0))
-
-                cv2.putText(frame, "x: " + '{:.2f}'.format(detection.depth_x*39.3071), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "y: " + '{:.2f}'.format(detection.depth_y*39.3071), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "z: " + '{:.2f}'.format(detection.depth_z*39.3071), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, '{:.2f}'.format(100*detection.confidence)+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 
-                sd.putNumber(str(i)+"/Label",detection.label)
-                sd.putNumber(str(i)+"/x",detection.depth_x)
-                sd.putNumber(str(i)+"/y",detection.depth_y)
-                sd.putNumber(str(i)+"/z",detection.depth_z)
+                x, y, z = numpy.add(numpy.matmul(rotationMatrix, [detection.depth_x, detection.depth_y, detection.depth_z]), CAMERA_OFFSET)
+
+                cv2.putText(frame, "x: " + str(int(x*100)), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "y: " + str(int(y*100)), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "z: " + str(int(z*100)), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, str(int(100*detection.confidence))+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                
+                objects.append({ "objectLabel":LABELS[detection.label], "x":int(x * 100), 
+                                "y":int(y * 100), "z":(int(z * 100)), "confidence":int(detection.confidence * 100) })
                 i = i+1
 
+            jsonObjects = json.dumps(objects)
+            sd.putString("MonsterVision/ObjectTracker", jsonObjects)
 
 # Display the Frame
 
