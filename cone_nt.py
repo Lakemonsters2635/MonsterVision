@@ -81,18 +81,17 @@ def readConfig():
 if not readConfig():
     sys.exit(1)
 
-if server:
-    nt_server_address = getMyIP()
-else:
-    nt_server_address = "10." + str(int(team/100)) + "." + str(int(team%100)) + ".2"
 
-ip=nt_server_address
-NetworkTables.initialize(server=ip)
+if server:
+    serverIP=getMyIP()
+else:
+    serverIP = '10.' + '{:02}'.format(int(team/100)) + '.{:02}'.format(team%100) + '.2'
+
+print(serverIP)
+NetworkTables.initialize(server=serverIP)
+
 
 sd = NetworkTables.getTable("MonsterVision")
-
-# cv2.namedWindow('MonsterVision', cv2.WINDOW_NORMAL)
-# cv2.resizeWindow('MonsterVision', (600, 600))
 
 # Initialize the OAK Camera.  This is boilerplate.
 
@@ -233,7 +232,7 @@ while True:
                 i = i+1
 
             jsonObjects = json.dumps(objects)
-            sd.putString("MonsterVision/ObjectTracker", jsonObjects)
+            sd.putString("ObjectTracker", jsonObjects)
 
 # Display the Frame
 
