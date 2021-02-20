@@ -21,8 +21,8 @@
     {
         "labels":
         [
-            "Power_Cell",
-            "Traffic_Cone"    
+            "powerCell",
+            "trafficCone"    
         ]
     }
 }

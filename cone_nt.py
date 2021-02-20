@@ -15,6 +15,7 @@ CAMERA_OFFSET = [0, .498, .200]             # Values in meters
 sinTheta = math.sin(CAMERA_TILT)
 cosTheta = math.cos(CAMERA_TILT)
 rotationMatrix = [[1, 0, 0], [0, cosTheta, sinTheta], [0, -sinTheta, cosTheta]]
+INCHES_PER_METER = 39.37
 
 # Constants
 CONFIG_FILE = "/boot/frc.json"
@@ -235,13 +236,13 @@ while True:
                 
                 x, y, z = numpy.add(numpy.matmul(rotationMatrix, [detection.depth_x, detection.depth_y, detection.depth_z]), CAMERA_OFFSET)
 
-                cv2.putText(frame, "x: " + str(int(x*100)), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "y: " + str(int(y*100)), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, "z: " + str(int(z*100)), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
-                cv2.putText(frame, str(int(100*detection.confidence))+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "x: " + str(int(x*INCHES_PER_METER)), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "y: " + str(int(y*INCHES_PER_METER)), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, "z: " + str(int(z*INCHES_PER_METER)), ptz, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
+                cv2.putText(frame, str(int(detection.confidence*100))+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 
-                objects.append({ "objectLabel":LABELS[detection.label], "x":int(x * 100), 
-                                "y":int(y * 100), "z":(int(z * 100)), "confidence":int(detection.confidence * 100) })
+                objects.append({ "objectLabel":LABELS[detection.label], "x":round(x * INCHES_PER_METER, 1), 
+                                "y":round(y * INCHES_PER_METER, 1), "z":round(z * INCHES_PER_METER, 1), "confidence":round(detection.confidence * INCHES_PER_METER, 1) })
                 i = i+1
 
             jsonObjects = json.dumps(objects)
