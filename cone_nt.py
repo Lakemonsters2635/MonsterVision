@@ -10,8 +10,8 @@ import socket
 import numpy
 import math
 
-CAMERA_TILT = -10 * math.pi / 180
-CAMERA_OFFSET = [0, .30, .10]
+CAMERA_TILT = -20 * math.pi / 180
+CAMERA_OFFSET = [0, .498, .200]             # Values in meters
 sinTheta = math.sin(CAMERA_TILT)
 cosTheta = math.cos(CAMERA_TILT)
 rotationMatrix = [[1, 0, 0], [0, cosTheta, sinTheta], [0, -sinTheta, cosTheta]]
