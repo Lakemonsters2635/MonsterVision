@@ -25,9 +25,7 @@ PREVIEW_HEIGHT = 200
 KEEP_ASPECT_RATIO = True
 STREAMS=["metaout", "previewout"
             # , "disparity_color"                 ## Enable this to see false color depth map display
-        ]
-LABELS = ["powerCell", "trafficCone"]
-        
+        ]      
 # To see messages from networktables, you must setup logging
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -101,12 +99,14 @@ output = cs.putVideo("MonsterVision", PREVIEW_WIDTH, PREVIEW_HEIGHT)
 
 device = depthai.Device('', False)
 
-p = device.create_pipeline(config={
+nnConfig = {
     "streams": STREAMS,
     "ai": {
 # The next five lines determine which model to use.
         "blob_file": "./resources/nn/cells-and-cones/cells-and-cones.blob.sh14cmx14NCE1",
         "blob_file_config": "./resources/nn/cells-and-cones/cells-and-cones.json",
+        # "blob_file": "./resources/nn/mobilenet-ssd/mobilenet-ssd.blob.sh14cmx14NCE1",
+        # "blob_file_config": "./resources/nn/mobilenet-ssd/mobilenet-ssd.json",
         # "blob_file": "./resources/nn/trafficcones/trafficcones.blob.sh14cmx14NCE1",
         # "blob_file_config": "./resources/nn/trafficcones/trafficcones.json",
         'shaves' : 14,
@@ -120,7 +120,20 @@ p = device.create_pipeline(config={
     "depth": {
         'padding_factor': 0.3
     }
-})
+}
+
+# This code looks through the blob_file_config (a JSON file) to get the obhect labels.
+
+blob_file_config = nnConfig["ai"]["blob_file_config"]
+print("blob_file_config="+blob_file_config)
+with open(blob_file_config, "rt", encoding="utf-8") as f:
+    j = json.load(f)
+LABELS = j["mappings"]["labels"]
+print(LABELS)
+
+# Now create the camera pipeline
+
+p = device.create_pipeline(config=nnConfig)
 
 if p is None:
     raise RuntimeError("Error initializing pipelne")
