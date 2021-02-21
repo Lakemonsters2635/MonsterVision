@@ -1,5 +1,7 @@
 # MonsterVision
 
+## Note: Additional documentation available in Setting Up a Raspberry Pi with WPILib and MonsterVision.docx
+
 ## IMPORTANT NOTE:
 VSCode supports Github, but you may need to update your Raspberry Pi:
 
