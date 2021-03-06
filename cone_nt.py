@@ -163,6 +163,11 @@ nnConfig = {
     },
     "depth": {
         'padding_factor': 0.3
+    },
+    "camera": {
+        'mono': {
+            'resolution_h': 400
+        }
     }
 }
 
