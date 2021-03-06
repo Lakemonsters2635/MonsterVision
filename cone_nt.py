@@ -166,7 +166,8 @@ nnConfig = {
     },
     "camera": {
         'mono': {
-            'resolution_h': 400
+            'resolution_h': 400,
+            'fps': 30
         }
     }
 }
