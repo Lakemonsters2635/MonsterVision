@@ -3,6 +3,7 @@ import depthai
 import sys
 import time
 from networktables import NetworkTables
+from networktables import NetworkTablesInstance
 from cscore import CameraServer
 import json
 import socket
@@ -10,15 +11,18 @@ import socket
 import numpy
 import math
 
-CAMERA_TILT = -20 * math.pi / 180
-CAMERA_OFFSET = [0, .498, .200]             # Values in meters
-sinTheta = math.sin(CAMERA_TILT)
-cosTheta = math.cos(CAMERA_TILT)
-rotationMatrix = [[1, 0, 0], [0, cosTheta, sinTheta], [0, -sinTheta, cosTheta]]
-INCHES_PER_METER = 39.37
+def isRomi():
+    try:
+        with open(ROMI_FILE, "rt", encoding="utf-8") as f:
+            j = json.load(f)
+    except OSError as err:
+        print("Could not open '{}': {}".format(ROMI_FILE, err), file=sys.stderr)
+        return False
+    return True
 
 # Constants
 CONFIG_FILE = "/boot/frc.json"
+ROMI_FILE = "/boot/romi.json"
 CAMERA_FPS = 30
 DESIRED_FPS = 5
 PREVIEW_WIDTH = 200
@@ -27,6 +31,33 @@ KEEP_ASPECT_RATIO = True
 STREAMS=["metaout", "previewout"
             # , "disparity_color"                 ## Enable this to see false color depth map display
         ]      
+INCHES_PER_METER = 39.37
+
+if isRomi():
+    CAMERA_TILT = 0
+    CAMERA_OFFSET = [0, .130, .076]             # Values in meters
+else:
+    CAMERA_TILT = -20 * math.pi / 180
+    CAMERA_OFFSET = [0, .498, .200]             # Values in meters
+
+sinTheta = math.sin(CAMERA_TILT)
+cosTheta = math.cos(CAMERA_TILT)
+rotationMatrix = [[1, 0, 0], [0, cosTheta, sinTheta], [0, -sinTheta, cosTheta]]
+
+print(rotationMatrix)
+
+# Given an object's bounding box (pt1, pt2) and the padding_factor, return the bounding
+# box over which the NN has computed depth
+
+def average_depth_coord(pt1, pt2, padding_factor):
+    factor = 1 - padding_factor
+    x_shift = (pt2[0] - pt1[0]) * factor / 2
+    y_shift = (pt2[1] - pt1[1]) * factor / 2
+    avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
+    avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
+    return avg_pt1, avg_pt2
+
+
 # To see messages from networktables, you must setup logging
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -82,14 +113,26 @@ if not readConfig():
     sys.exit(1)
 
 
+# if isRomi():
+
+# else:
+#     if server:
+#         serverIP=getMyIP()
+#     else:
+#         serverIP = '10.' + '{:02}'.format(int(team/100)) + '.{:02}'.format(team%100) + '.2'
+
+#     print(serverIP)
+#     NetworkTables.initialize(server=serverIP)
+
+# start NetworkTables
+ntinst = NetworkTablesInstance.getDefault()
 if server:
-    serverIP=getMyIP()
+    print("Setting up NetworkTables server")
+    ntinst.startServer()
 else:
-    serverIP = '10.' + '{:02}'.format(int(team/100)) + '.{:02}'.format(team%100) + '.2'
-
-print(serverIP)
-NetworkTables.initialize(server=serverIP)
-
+    print("Setting up NetworkTables client for team {}".format(team))
+    ntinst.startClientTeam(team)
+    ntinst.startDSClient()
 
 sd = NetworkTables.getTable("MonsterVision")
 
@@ -121,6 +164,12 @@ nnConfig = {
     },
     "depth": {
         'padding_factor': 0.3
+    },
+    "camera": {
+        'mono': {
+            'resolution_h': 400,
+            'fps': 30
+        }
     }
 }
 
@@ -216,6 +265,13 @@ while True:
 
                 cv2.rectangle(frame, pt1, pt2, color, 1)
 
+# Draw the BB over whichthe depth is computed
+
+                avg_pt1, avg_pt2 = average_depth_coord([detection.x_min, detection.y_min], [detection.x_max, detection.y_max], nnConfig['depth']['padding_factor'])
+                avg_pt1 = int(avg_pt1[0] * img_w), int(avg_pt1[1] * img_h)
+                avg_pt2 = int(avg_pt2[0] * img_w), int(avg_pt2[1] * img_h)
+                cv2.rectangle(frame, avg_pt1, avg_pt2, (255, 0, 0), 1)
+
 # Ptx, pty and ptz are simply where we draw the x, y and z positions underneath the bounding box.
 
 # If labelling would be off the bottom of the image, move to above the bounding box
@@ -236,6 +292,7 @@ while True:
                 cv2.putText(frame, str(i), pt1, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0))
                 
                 x, y, z = numpy.add(numpy.matmul(rotationMatrix, [detection.depth_x, detection.depth_y, detection.depth_z]), CAMERA_OFFSET)
+                #x, y, z = [detection.depth_x, detection.depth_y, detection.depth_z]
 
                 cv2.putText(frame, "x: " + str(int(x*INCHES_PER_METER)), ptx, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 cv2.putText(frame, "y: " + str(int(y*INCHES_PER_METER)), pty, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
@@ -243,11 +300,12 @@ while True:
                 cv2.putText(frame, str(int(detection.confidence*100))+'%', ptc, cv2.FONT_HERSHEY_SIMPLEX, 0.4, color)
                 
                 objects.append({ "objectLabel":LABELS[detection.label], "x":round(x * INCHES_PER_METER, 1), 
-                                "y":round(y * INCHES_PER_METER, 1), "z":round(z * INCHES_PER_METER, 1), "confidence":round(detection.confidence * INCHES_PER_METER, 1) })
+                                "y":round(y * INCHES_PER_METER, 1), "z":round(z * INCHES_PER_METER, 1), "confidence":round(detection.confidence, 1) })
                 i = i+1
 
             jsonObjects = json.dumps(objects)
             sd.putString("ObjectTracker", jsonObjects)
+            ntinst.flush()
 
 # Display the Frame
 

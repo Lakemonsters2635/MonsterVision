@@ -5,4 +5,8 @@ __pycache__
 network_test.py
 resources.zip
 json_test.py
+<<<<<<< HEAD
 .vscode/settings.json
+=======
+MonsterVision.py
+>>>>>>> e0bc6e370062ce29d28b45bc4ebd91b18bcac4a5
