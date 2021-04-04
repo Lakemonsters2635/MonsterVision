@@ -5,3 +5,4 @@ __pycache__
 network_test.py
 resources.zip
 json_test.py
+.vscode/settings.json
