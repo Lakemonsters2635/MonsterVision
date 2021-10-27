@@ -6,7 +6,6 @@ from networktables import NetworkTables
 from networktables import NetworkTablesInstance
 from cscore import CameraServer
 import json
-import socket
 
 import numpy
 import math
@@ -110,18 +109,6 @@ def readConfig():
 
 if not readConfig():
     sys.exit(1)
-
-
-# if isRomi():
-
-# else:
-#     if server:
-#         serverIP=getMyIP()
-#     else:
-#         serverIP = '10.' + '{:02}'.format(int(team/100)) + '.{:02}'.format(team%100) + '.2'
-
-#     print(serverIP)
-#     NetworkTables.initialize(server=serverIP)
 
 # start NetworkTables
 ntinst = NetworkTablesInstance.getDefault()
