@@ -11,6 +11,8 @@ import socket
 import numpy
 import math
 
+# Return True if we're running on Romi.  False if we're a coprocessor on a big 'bot
+
 def isRomi():
     try:
         with open(ROMI_FILE, "rt", encoding="utf-8") as f:
@@ -74,6 +76,12 @@ def parseError(str):
     print("config error in '" + CONFIG_FILE + "': " + str, file=sys.stderr)
 
 
+# Reads the FRC configuration file.  Returns False if file cannot be read or is missing crucial information
+#
+# On success, the following gloval variables are set:
+#       team                Team Number
+#       server              True if we are to be the Network Tables server.  False if we're just a client
+#   
 def readConfig():
     global team
     global server
@@ -290,6 +298,8 @@ while True:
                 objects.append({ "objectLabel":LABELS[detection.label], "x":round(x * INCHES_PER_METER, 1), 
                                 "y":round(y * INCHES_PER_METER, 1), "z":round(z * INCHES_PER_METER, 1), "confidence":round(detection.confidence, 1) })
                 i = i+1
+
+# Take our list of objects found and dump it to JSON format.  Then write the JSON string to the ObjectTracker key in the Network Tables
 
             jsonObjects = json.dumps(objects)
             sd.putString("ObjectTracker", jsonObjects)
