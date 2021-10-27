@@ -65,7 +65,8 @@ team = None
 server = False
 
 def getMyIP():
-    return socket.gethostbyname(socket.gethostname())
+    me = socket.gethostname() + ".local"
+    return socket.gethostbyname(me)
 
 def parseError(str):
     """Report parse error."""
