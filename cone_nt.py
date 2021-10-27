@@ -6,6 +6,7 @@ from networktables import NetworkTables
 from networktables import NetworkTablesInstance
 from cscore import CameraServer
 import json
+import socket
 
 import numpy
 import math
