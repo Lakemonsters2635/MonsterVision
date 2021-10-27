@@ -29,5 +29,6 @@ VSCode supports Github, but you may need to update your Raspberry Pi:
 Each directory is one NN model.
 
 ### Top Level Files
-cone_tracker.py   A very basic OAK program that uses the trafficcones NN to find and localize traffic cones.
-cone_nt.py        Object track with Network Tables interface.  Locates cones and power cells.  Writes the data in JSON format to Network Tables
+| cone_tracker.py | A very basic OAK program that uses the trafficcones NN to find and localize traffic cones. |  
+| cone_nt.py | Object track with Network Tables interface.  Locates cones and power cells.  Writes the data in JSON format to Network Tables. |  
+
